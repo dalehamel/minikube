@@ -27,7 +27,8 @@ ISO_VERSION ?= v1.0.7
 ISO_BUCKET ?= minikube/iso
 
 GOOS ?= $(shell go env GOOS)
-GOARCH ?= $(shell go env GOARCH)
+#GOARCH ?= $(shell go env GOARCH)
+GOARCH ?= arm
 BUILD_DIR ?= ./out
 ORG := k8s.io
 REPOPATH ?= $(ORG)/minikube
@@ -67,7 +68,7 @@ out/minikube$(IS_EXE): out/minikube-$(GOOS)-$(GOARCH)$(IS_EXE)
 
 out/localkube: $(GOPATH)/src/$(ORG) $(shell $(LOCALKUBEFILES))
 ifeq ($(BUILD_OS),Linux)
-	CGO_ENABLED=1 go build -ldflags=$(LOCALKUBE_LDFLAGS) -o $(BUILD_DIR)/localkube ./cmd/localkube
+	CGO_ENABLED=1 GOARCH=$(GOARCH) go build -ldflags=$(LOCALKUBE_LDFLAGS) -o $(BUILD_DIR)/localkube ./cmd/localkube
 else
 	docker run -w /go/src/$(REPOPATH) -e IN_DOCKER=1 -v $(shell pwd):/go/src/$(REPOPATH) $(BUILD_IMAGE) make out/localkube
 endif
