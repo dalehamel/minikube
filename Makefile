@@ -21,7 +21,7 @@ DEB_VERSION ?= $(VERSION_MAJOR).$(VERSION_MINOR)-$(VERSION_BUILD)
 INSTALL_SIZE ?= $(shell du out/minikube-windows-amd64.exe | cut -f1)
 BUILDROOT_BRANCH ?= 2016.08
 REGISTRY?=gcr.io/k8s-minikube
-DARWIN_BUILD_IMAGE ?= karalabe/xgo-1.7.3
+CROSS_BUILD_IMAGE ?= karalabe/xgo-1.7.3
 
 ISO_VERSION ?= v1.0.7
 ISO_BUCKET ?= minikube/iso
@@ -67,17 +67,17 @@ out/minikube$(IS_EXE): out/minikube-$(GOOS)-$(GOARCH)$(IS_EXE)
 	cp $(BUILD_DIR)/minikube-$(GOOS)-$(GOARCH)$(IS_EXE) $(BUILD_DIR)/minikube$(IS_EXE)
 
 out/localkube: $(GOPATH)/src/$(ORG) $(shell $(LOCALKUBEFILES))
-ifeq ($(BUILD_OS),Linux)
-	CGO_ENABLED=1 GOARCH=$(GOARCH) go build -ldflags=$(LOCALKUBE_LDFLAGS) -o $(BUILD_DIR)/localkube ./cmd/localkube
+ifeq ($(IN_DOCKER),1)
+  CGO_ENABLED=1 GOARCH=arm go build -ldflags='-X "k8s.io/minikube/vendor/k8s.io/kubernetes/pkg/version.gitCommit=029c3a408176b55c30846f0faedf56aae5992e9b" -X "k8s.io/minikube/vendor/k8s.io/kubernetes/pkg/version.gitVersion=v1.5.3" -X "k8s.io/minikube/vendor/k8s.io/kubernetes/pkg/version.gitTreeState=dirty" -X "k8s.io/minikube/pkg/version.version=v0.17.1" -X "k8s.io/minikube/pkg/version.isoVersion=v1.0.7" -X "k8s.io/minikube/pkg/version.isoPath=minikube/iso" -s -w -extldflags "-static"' -o ./out/localkube ./cmd/localkube
 else
-	docker run -w /go/src/$(REPOPATH) -e IN_DOCKER=1 -v $(shell pwd):/go/src/$(REPOPATH) $(BUILD_IMAGE) make out/localkube
+	docker run -w /go/src/$(REPOPATH) -e IN_DOCKER=1 -v $(shell pwd):/go/src/$(REPOPATH) $(CROSS_BUILD_IMAGE) make out/localkube
 endif
 
 out/minikube-darwin-amd64: $(GOPATH)/src/$(ORG) pkg/minikube/assets/assets.go $(shell $(MINIKUBEFILES))
 ifeq ($(IN_DOCKER),1)
 	CC=o64-clang CXX=o64-clang++ CGO_ENABLED=1 GOARCH=amd64 GOOS=darwin go build --installsuffix cgo -ldflags="$(MINIKUBE_LDFLAGS) $(K8S_VERSION_LDFLAGS)" -a -o $(BUILD_DIR)/minikube-darwin-amd64 k8s.io/minikube/cmd/minikube
 else
-	docker run -e IN_DOCKER=1 --workdir /go/src/$(REPOPATH) --entrypoint /usr/bin/make -v $(PWD):/go/src/$(REPOPATH) $(DARWIN_BUILD_IMAGE) out/minikube-darwin-amd64
+	docker run -e IN_DOCKER=1 --workdir /go/src/$(REPOPATH) --entrypoint /usr/bin/make -v $(PWD):/go/src/$(REPOPATH) $(CROSS_BUILD_IMAGE) out/minikube-darwin-amd64
 endif
 
 out/minikube-linux-amd64: $(GOPATH)/src/$(ORG) pkg/minikube/assets/assets.go $(shell $(MINIKUBEFILES))
